@@ -76,3 +76,41 @@ impl Display for Location {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::automatom::invariant::Invariant;
+
+    use super::Location;
+
+    #[test]
+    fn location_new_normal_construction() {
+        let name = "some random name";
+        let invariant = Invariant::new_true();
+        let location = Location::new_normal(name, &invariant);
+        assert!(
+            matches!(location, Location::Normal { name: location_name, invariant: location_invariant }
+                if location_name == name && location_invariant == invariant)
+        );
+    }
+
+    #[test]
+    fn location_new_initial_construction() {
+        let name = "some random name";
+        let invariant = Invariant::new_true();
+        let location = Location::new_initial(name, &invariant);
+        assert!(
+            matches!(location, Location::Initial { name: location_name, invariant: location_invariant }
+                if location_name == name && location_invariant == invariant)
+        );
+    }
+
+    #[test]
+    fn location_new_product_construction() {}
+
+    #[test]
+    fn location_new_inconsistent_construction() {}
+
+    #[test]
+    fn location_new_universal_construction() {}
+}

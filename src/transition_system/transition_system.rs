@@ -1,17 +1,30 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 
 use crate::automatom::{automaton::Automaton, channel::Channel};
 
-use super::state::State;
+use super::{
+    state::State, transition_system_breadth_first_search::TransitionSystemBreadthFirstSearch,
+};
 
 pub trait TransitionSystem {
     fn predecessors(&self, states: &Vec<State>, actions: &HashSet<Channel>) -> Vec<State>;
     fn input_predecessors(&self, states: &Vec<State>) -> Vec<State>;
     fn output_predecessors(&self, states: &Vec<State>) -> Vec<State>;
-    fn successors(&self, states: &Vec<State>) -> Vec<State>;
+    fn successors(&self, state: &State, actions: &HashSet<Channel>) -> Vec<State>;
+    fn get_initial_state(&self) -> State;
+    fn get_actions(&self) -> &HashSet<Channel>;
+    fn get_inputs(&self) -> &HashSet<Channel>;
+    fn get_outputs(&self) -> &HashSet<Channel>;
 }
 
 impl TransitionSystem for Automaton {
+    fn get_initial_state(&self) -> State {
+        State::new(
+            &self.get_initial_location(),
+            &self.get_initial_environment().clone(),
+        )
+    }
+
     fn predecessors(&self, states: &Vec<State>, actions: &HashSet<Channel>) -> Vec<State> {
         let mut result = Vec::new();
         for state in states {
@@ -19,7 +32,7 @@ impl TransitionSystem for Automaton {
             let mut states_in_preceding_locations = Vec::new();
 
             // For all reachable states store the ones in the preceding locations
-            for current in BreadthFirstSearch::new(&actions, self) {
+            for current in TransitionSystemBreadthFirstSearch::new(&actions, self.clone()) {
                 if precedeeing_locations.contains(&current.location) {
                     states_in_preceding_locations.push(current)
                 }
@@ -44,69 +57,25 @@ impl TransitionSystem for Automaton {
         self.predecessors(states, self.get_outputs())
     }
 
-    fn successors(&self, states: &Vec<State>) -> Vec<State> {
+    fn successors(&self, state: &State, actions: &HashSet<Channel>) -> Vec<State> {
         let mut result = Vec::new();
-        for state in states {
-            for edge in self.outgoing_edges(&state.location, self.get_actions()) {
-                if state.enables(&edge) {
-                    let mut new_state = state.clone();
-                    new_state.execute(&edge);
-                    result.push(new_state);
-                }
+        for edge in self.outgoing_edges(&state.location, actions) {
+            if edge.enabled(&state) {
+                result.push(edge.execute(&state));
             }
         }
         return result;
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct BreadthFirstSearch {
-    automaton: Automaton,
-    actions: HashSet<Channel>,
-    visited: Vec<State>,
-    frontier: VecDeque<State>,
-}
-
-impl BreadthFirstSearch {
-    pub fn new(actions: &HashSet<Channel>, automaton: &Automaton) -> Self {
-        BreadthFirstSearch {
-            automaton: automaton.clone(),
-            actions: actions.clone(),
-            visited: Vec::new(),
-            frontier: VecDeque::new(),
-        }
+    fn get_actions(&self) -> &HashSet<Channel> {
+        self.get_actions()
     }
-}
 
-impl Iterator for BreadthFirstSearch {
-    type Item = State;
+    fn get_inputs(&self) -> &HashSet<Channel> {
+        self.get_inputs()
+    }
 
-    fn next(&mut self) -> Option<Self::Item> {
-        // If true, then we have the first invocation to next and init it
-        if self.visited.is_empty() && self.frontier.is_empty() {
-            self.frontier.push_back(self.automaton.get_initial_state());
-        }
-
-        // If true, then we have finished the search
-        if self.frontier.is_empty() {
-            return None;
-        }
-
-        let state = self.frontier.pop_back().unwrap();
-        for edge in self
-            .automaton
-            .outgoing_edges(&state.location, &self.actions)
-        {
-            if state.enables(&edge) {
-                let mut next_state = state.clone();
-                next_state.execute(&edge);
-
-                if !self.visited.contains(&next_state) && !self.frontier.contains(&next_state) {
-                    self.frontier.push_back(next_state);
-                }
-            }
-        }
-
-        None
+    fn get_outputs(&self) -> &HashSet<Channel> {
+        self.get_outputs()
     }
 }

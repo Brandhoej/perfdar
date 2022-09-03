@@ -1,13 +1,13 @@
-use crate::language::node::NodeType;
+use crate::language::node_type::NodeType;
 
 use super::{channel::Channel, edge::Edge, location::Location};
 use std::collections::HashSet;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum Error {
     #[error("Automaton {automaton:} is missing an initial location")]
-    MissingInitial { automaton: String },
+    MissingInitialLocation { automaton: String },
     #[error("Automaton {automaton:} is empty")]
     EmptyAutomaton { automaton: String },
     #[error(
@@ -22,9 +22,12 @@ pub enum Error {
         automaton: String,
         initials: HashSet<Location>,
     },
-    #[error(
-        "Automaton {automaton:} location {location:} is missing the identifiers {identifiers:?}"
-    )]
+    #[error("Automaton {automaton:} {location:} is an inconsistent initial location")]
+    InconsistentInitialLocation {
+        automaton: String,
+        location: Location,
+    },
+    #[error("Automaton {automaton:} {location:} is missing the identifiers {identifiers:?}")]
     LocationInvariantMissingIdentifiers {
         automaton: String,
         location: Location,
@@ -48,10 +51,10 @@ pub enum Error {
         edge: Edge,
         missing: Vec<String>,
     },
-    #[error("Automaton {automaton:} edge {:}-{:}->{:} update {:} is not {:} but instead {:}", .edge.source, .edge.action, edge.target, .edge.update, NodeType::Void, actual)]
-    EdgeUpdateIsNotVoid {
+    #[error("Automaton {automaton:} {location:} is missing the identifiers {missing:?}")]
+    MissingIdentifiersInLocationInvariant {
         automaton: String,
-        edge: Edge,
-        actual: NodeType,
+        location: Location,
+        missing: Vec<String>,
     },
 }

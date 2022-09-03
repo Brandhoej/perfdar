@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::language::node::{Node, Value};
+use crate::language::{node::Node, value::Value};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Invariant {

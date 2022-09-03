@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use super::node::{Node, Value};
+use super::{node::Node, value::Value};
 
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub struct Environment {
@@ -8,8 +8,12 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub fn empty() -> Self {
+    pub fn new_empty() -> Self {
         Self::default()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
     }
 
     pub fn contains(&self, identifier: &str) -> bool {
@@ -20,7 +24,7 @@ impl Environment {
         self.map.get(identifier)
     }
 
-    pub fn add(&mut self, identifier: &str, value: &Value) -> bool {
+    pub fn insert(&mut self, identifier: &str, value: &Value) -> bool {
         if self.contains(identifier) {
             return false;
         }
@@ -109,13 +113,13 @@ impl Environment {
 
 #[cfg(test)]
 mod tests {
-    use crate::language::node::{Node, Value};
+    use crate::language::{node::Node, value::Value};
 
     use super::Environment;
 
     #[test]
     fn environment_empty_has_no_identifiers() {
-        let environment = Environment::empty();
+        let environment = Environment::new_empty();
 
         let count = environment.count();
 
@@ -124,9 +128,9 @@ mod tests {
 
     #[test]
     fn environment_empty_has_with_two_identifiers() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(false));
-        environment.add("b", &Value::Bool(false));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(false));
+        environment.insert("b", &Value::Bool(false));
 
         let count = environment.count();
 
@@ -135,8 +139,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifier_has_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
 
         let contains = environment.contains("a");
 
@@ -145,8 +149,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifier_does_not_have_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
 
         let contains = environment.contains("b");
 
@@ -155,8 +159,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifiers_in_value_has_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
         let identifier = Value::Identifier(String::from("a"));
 
         let contains = environment.contains_identifiers_in_value(&identifier);
@@ -166,8 +170,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifiers_in_value_does_not_have_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
         let identifier = Value::Identifier(String::from("b"));
 
         let contains = environment.contains_identifiers_in_value(&identifier);
@@ -177,8 +181,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifiers_in_node_literal_has_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
         let identifier = Node::Literal(Value::Identifier(String::from("a")));
 
         let contains = environment.contains_identifiers_in_node(&identifier);
@@ -188,8 +192,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifiers_in_node_literal_does_not_have_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
         let identifier = Node::Literal(Value::Identifier(String::from("b")));
 
         let contains = environment.contains_identifiers_in_node(&identifier);
@@ -199,8 +203,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifiers_in_node_assignment_has_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
         let assignment = Node::Assigment {
             identifier: Value::Identifier(String::from("a")),
             value: Value::Bool(false),
@@ -213,8 +217,8 @@ mod tests {
 
     #[test]
     fn environment_contains_identifiers_in_node_assignment_does_not_have_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
         let assignment = Node::Assigment {
             identifier: Value::Identifier(String::from("b")),
             value: Value::Bool(false),
@@ -227,8 +231,8 @@ mod tests {
 
     #[test]
     fn environment_get_identifier_does_not_have_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
 
         let value = environment.get("b");
 
@@ -237,8 +241,8 @@ mod tests {
 
     #[test]
     fn environment_set_identifier_has_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
 
         let was_set = environment.set("a", &Value::Bool(false));
 
@@ -247,8 +251,8 @@ mod tests {
 
     #[test]
     fn environment_set_identifier_has_identifier_changes_value() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
         environment.set("a", &Value::Bool(false));
 
         let value = environment.get("a").unwrap();
@@ -258,8 +262,8 @@ mod tests {
 
     #[test]
     fn environment_set_identifier_does_not_have_identifier() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(true));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(true));
 
         let was_set = environment.set("b", &Value::Bool(false));
 
@@ -268,10 +272,10 @@ mod tests {
 
     #[test]
     fn environment_concat_adds_all_identifiers_in_other() {
-        let mut left = Environment::empty();
-        left.add("a", &Value::Bool(false));
-        let mut right = Environment::empty();
-        right.add("b", &Value::Bool(true));
+        let mut left = Environment::new_empty();
+        left.insert("a", &Value::Bool(false));
+        let mut right = Environment::new_empty();
+        right.insert("b", &Value::Bool(true));
 
         let concat = left.concat(&right);
         let count = left.count();
@@ -286,10 +290,10 @@ mod tests {
 
     #[test]
     fn environment_concat_is_not_disjoint_fails() {
-        let mut left = Environment::empty();
-        left.add("a", &Value::Bool(false));
-        let mut right = Environment::empty();
-        right.add("a", &Value::Bool(true));
+        let mut left = Environment::new_empty();
+        left.insert("a", &Value::Bool(false));
+        let mut right = Environment::new_empty();
+        right.insert("a", &Value::Bool(true));
 
         let concat = left.concat(&right);
         let count = left.count();
@@ -302,10 +306,10 @@ mod tests {
 
     #[test]
     fn environment_is_disjoint_true() {
-        let mut left = Environment::empty();
-        left.add("a", &Value::Bool(false));
-        let mut right = Environment::empty();
-        right.add("b", &Value::Bool(true));
+        let mut left = Environment::new_empty();
+        left.insert("a", &Value::Bool(false));
+        let mut right = Environment::new_empty();
+        right.insert("b", &Value::Bool(true));
 
         let disjoint = left.is_disjoint(&right);
 
@@ -314,10 +318,10 @@ mod tests {
 
     #[test]
     fn environment_is_disjoint_false() {
-        let mut left = Environment::empty();
-        left.add("a", &Value::Bool(false));
-        let mut right = Environment::empty();
-        right.add("a", &Value::Bool(true));
+        let mut left = Environment::new_empty();
+        left.insert("a", &Value::Bool(false));
+        let mut right = Environment::new_empty();
+        right.insert("a", &Value::Bool(true));
 
         let disjoint = left.is_disjoint(&right);
 
@@ -326,8 +330,8 @@ mod tests {
 
     #[test]
     fn environment_missing_identifiers_in_node() {
-        let mut environment = Environment::empty();
-        environment.add("a", &Value::Bool(false));
+        let mut environment = Environment::new_empty();
+        environment.insert("a", &Value::Bool(false));
         let assignment = Node::Assigment {
             identifier: Value::Identifier(String::from("a")),
             value: Value::Identifier(String::from("b")),
