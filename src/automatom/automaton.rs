@@ -212,12 +212,21 @@ impl Automaton {
         } = unwrapped_initial
         {
             let mut interpreter = Interpreter::new(&initial_environment);
-            let evaluation = interpreter.eval(&invariant.node.clone());
-            if evaluation.is_ok() && evaluation.ok().unwrap().unwrap() == Value::new_false() {
+            let evaluation_result = interpreter.eval(&invariant.node.clone());
+            if evaluation_result.is_err() {
                 return Err(Error::InconsistentInitialLocation {
                     automaton: String::from(name),
                     location: unwrapped_initial.clone(),
                 });
+            }
+
+            if let Some(evaluation) = evaluation_result.ok() {
+                if evaluation.is_false() {
+                    return Err(Error::InconsistentInitialLocation {
+                        automaton: String::from(name),
+                        location: unwrapped_initial.clone(),
+                    });
+                }
             }
         }
 
@@ -348,7 +357,7 @@ mod tests {
         let channel_out = Channel::new_output("out");
         let channels: HashSet<Channel> = HashSet::from([channel_in.clone(), channel_out.clone()]);
         let guard = Guard::new_true();
-        let update = Update::new_void();
+        let update = Update::new_pure();
         let a = Location::new_initial("a", invariant);
         let b = Location::new_normal("b", invariant);
         let c = Location::new_normal("c", invariant);
@@ -549,7 +558,7 @@ mod tests {
             &location,
             &in_channel,
             &Guard::new_false(),
-            &Update::new_void(),
+            &Update::new_pure(),
         );
         let edges = HashSet::from([edge]);
         let automaton = Automaton::new("automaton", &edges, None);
@@ -565,7 +574,7 @@ mod tests {
             &location_a,
             &in_channel,
             &Guard::new_false(),
-            &Update::new_void(),
+            &Update::new_pure(),
             &location_b,
         );
         let edges = HashSet::from([edge]);
@@ -581,7 +590,7 @@ mod tests {
             &location,
             &in_channel,
             &Guard::new_false(),
-            &Update::new_void(),
+            &Update::new_pure(),
         );
         let edges = HashSet::from([edge]);
         let automaton = Automaton::new("automaton", &edges, None);
@@ -599,7 +608,7 @@ mod tests {
             &location,
             &in_channel,
             &Guard::new_false(),
-            &Update::new_void(),
+            &Update::new_pure(),
         );
         let edges = HashSet::from([edge]);
         let automaton = Automaton::new("automaton", &edges, Some(&environment));

@@ -38,13 +38,14 @@ impl<TS: TransitionSystem> Iterator for TransitionSystemBreadthFirstSearch<TS> {
             return None;
         }
 
-        let state = self.frontier.pop_back().unwrap();
+        let state = self.frontier.pop_front().unwrap();
+        self.visited.push(state.clone());
         for next in self.transition_system.successors(&state, &self.actions) {
             if !self.visited.contains(&next) && !self.frontier.contains(&next) {
-                self.frontier.push_back(next);
+                self.frontier.push_back(next.clone());
             }
         }
 
-        None
+        Some(state)
     }
 }

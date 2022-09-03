@@ -29,7 +29,7 @@ impl Update {
         }
     }
 
-    pub fn new_void() -> Self {
+    pub fn new_pure() -> Self {
         Self::empty()
     }
 

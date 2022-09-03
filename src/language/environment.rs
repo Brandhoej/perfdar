@@ -1,4 +1,7 @@
-use std::collections::{HashMap, VecDeque};
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt::Display,
+};
 
 use super::{node::Node, value::Value};
 
@@ -18,6 +21,14 @@ impl Environment {
 
     pub fn contains(&self, identifier: &str) -> bool {
         self.map.contains_key(identifier)
+    }
+
+    pub fn contains_with_value(&self, identifier: &str, value: &Value) -> bool {
+        if let Some(identified_value) = self.get(identifier) {
+            identified_value == value
+        } else {
+            false
+        }
     }
 
     pub fn get(&self, identifier: &str) -> Option<&Value> {
@@ -108,6 +119,17 @@ impl Environment {
         }
 
         return true;
+    }
+}
+
+impl Display for Environment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let displays: Vec<&str> = self
+            .map
+            .iter()
+            .map(|(key, value)| format_args!("{} := {}", key, value).as_str().unwrap())
+            .collect();
+        f.write_fmt(format_args!("{:#?}", displays))
     }
 }
 

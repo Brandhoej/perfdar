@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     automatom::{edge::Edge, location::Location},
     language::environment::Environment,
@@ -24,5 +26,11 @@ impl State {
             }
         }
         return false;
+    }
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("({}, {})", self.location, self.environment))
     }
 }

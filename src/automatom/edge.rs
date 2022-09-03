@@ -1,9 +1,8 @@
-use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::fmt::Display;
 
+use crate::language::evaluation::Evaluation;
 use crate::language::interpreter::Interpreter;
-use crate::language::value::Value;
 use crate::transition_system::state::State;
 
 use super::channel::*;
@@ -48,7 +47,17 @@ impl Edge {
     }
 
     pub fn execute(&self, state: &State) -> State {
-        State::new(&self.target, &state.environment)
+        if let Some(update) = self.update.node.clone() {
+            let mut interpreter = Interpreter::new(&state.environment);
+            let evaluation = interpreter.eval(&update);
+            if evaluation.is_err() {
+                // TODO: Handle failed evaluations
+                panic!("Edge update execution failed");
+            }
+            State::new(&self.target, &interpreter.get_environment())
+        } else {
+            State::new(&self.target, &state.environment)
+        }
     }
 
     pub fn enabled(&self, state: &State) -> bool {
@@ -57,20 +66,19 @@ impl Edge {
         }
 
         let mut interpreter = Interpreter::new(&state.environment);
-        let mut worklist: VecDeque<&Value> = VecDeque::new();
-        let result = interpreter.eval(&self.guard.node).unwrap().unwrap();
-        worklist.push_front(&result);
-
-        while !worklist.is_empty() {
-            match worklist.pop_front().unwrap() {
-                Value::Bool(value) => return *value,
-                Value::Identifier(ident) => {
-                    worklist.push_back(state.environment.get(&ident).unwrap());
-                }
-            }
+        let evaluation_result = interpreter.eval(&self.guard.node);
+        if evaluation_result.is_err() {
+            return false;
         }
 
-        unreachable!()
+        return if let Some(evaluation) = evaluation_result.ok() {
+            match evaluation {
+                Evaluation::Bool(value) => value,
+                Evaluation::Void => panic!("Guard evaluation was void should have been boolean"),
+            }
+        } else {
+            false
+        };
     }
 }
 

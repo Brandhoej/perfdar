@@ -1,6 +1,12 @@
 use std::collections::VecDeque;
 
-use super::{environment::*, error::Error, node::*, value::Value};
+use super::{
+    environment::*,
+    error::Error,
+    evaluation::{self, Evaluation},
+    node::*,
+    value::Value,
+};
 
 #[derive(Default, Clone, Eq, PartialEq)]
 pub struct Interpreter {
@@ -18,7 +24,7 @@ impl Interpreter {
         Interpreter::default()
     }
 
-    pub fn eval<'a>(&'a mut self, node: &'a Node) -> Result<Option<Value>, Error> {
+    pub fn eval<'a>(&'a mut self, node: &'a Node) -> Result<Evaluation, Error> {
         let mut stack: VecDeque<Value> = VecDeque::new();
         let mut worklist: VecDeque<&Node> = VecDeque::new();
         worklist.push_back(node);
@@ -57,13 +63,27 @@ impl Interpreter {
             }
         }
 
-        return Ok(stack.pop_front());
+        match stack.pop_front() {
+            Some(value) => match value {
+                Value::Bool(value) => Ok(Evaluation::Bool(value)),
+                Value::Identifier(_) => Err(Error::RuntimeError {
+                    message: String::from("An identifier cannot be an evaluation"),
+                }),
+            },
+            None => Ok(Evaluation::Void),
+        }
+    }
+
+    pub fn get_environment(&self) -> Environment {
+        self.environment.clone()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::language::{environment::Environment, node::Node, value::Value};
+    use crate::language::{
+        environment::Environment, evaluation::Evaluation, node::Node, value::Value,
+    };
 
     use super::Interpreter;
 
@@ -73,21 +93,21 @@ mod tests {
         let mut interpreter = Interpreter::new(&environment);
         let boolean = Node::Literal(Value::Bool(false));
 
-        let result = interpreter.eval(&boolean).unwrap().unwrap();
+        let result = interpreter.eval(&boolean).unwrap();
 
-        assert_eq!(result, Value::Bool(false));
+        assert_eq!(result, Evaluation::new_false());
     }
 
     #[test]
-    fn interpreter_eval_identigier_returns_stored_value() {
+    fn interpreter_eval_identifier_returns_stored_value() {
         let mut environment = Environment::new_empty();
         environment.insert("a", &Value::Bool(true));
         let mut interpreter = Interpreter::new(&environment);
         let identifier = Node::Literal(Value::Identifier(String::from("a")));
 
-        let result = interpreter.eval(&identifier).unwrap().unwrap();
+        let result = interpreter.eval(&identifier).unwrap();
 
-        assert_eq!(result, Value::Bool(true));
+        assert_eq!(result, Evaluation::new_true());
     }
 
     #[test]
@@ -111,10 +131,9 @@ mod tests {
             value: Value::Bool(false),
         };
 
-        let result = interpreter.eval(&assignment);
+        let result = interpreter.eval(&assignment).ok().unwrap();
 
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), None);
+        assert_eq!(result, Evaluation::Void);
     }
 
     #[test]
