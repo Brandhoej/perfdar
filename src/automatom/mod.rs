@@ -6,3 +6,4 @@ pub mod guard;
 pub mod invariant;
 pub mod location;
 pub mod update;
+pub mod conjunction;

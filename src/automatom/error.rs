@@ -1,4 +1,4 @@
-use crate::language::node_type::NodeType;
+use crate::language::lang_type::LangType;
 
 use super::{channel::Channel, edge::Edge, location::Location};
 use std::collections::HashSet;
@@ -39,11 +39,11 @@ pub enum Error {
         edge: Edge,
         missing: Vec<String>,
     },
-    #[error("Automaton {automaton:} edge {:}-{:}->{:} guard {:} is not {:} but instead {:}", .edge.source, .edge.action, edge.target, .edge.guard, NodeType::Logical, actual)]
+    #[error("Automaton {automaton:} edge {:}-{:}->{:} guard {:} is not {:} but instead {:}", .edge.source, .edge.action, edge.target, .edge.guard, LangType::Logical, actual)]
     EdgeGuardIsNotLogical {
         automaton: String,
         edge: Edge,
-        actual: NodeType,
+        actual: LangType,
     },
     #[error("Automaton {automaton:} edge {:}-{:}->{:} update {:} is missing the identifiers {missing:?}", .edge.source, .edge.action, edge.target, .edge.update)]
     MissingIdentifiersInEdgeUpdate {

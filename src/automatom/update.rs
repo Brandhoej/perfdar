@@ -1,10 +1,10 @@
 use std::fmt::Display;
 
-use crate::language::node::Node;
+use crate::language::statement::Statement;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Update {
-    pub node: Option<Node>,
+    pub node: Option<Statement>,
 }
 
 impl Default for Update {
@@ -23,9 +23,9 @@ impl Display for Update {
 }
 
 impl Update {
-    pub fn new(node: &Node) -> Self {
+    pub fn new(statement: &Statement) -> Self {
         Self {
-            node: Some(node.clone()),
+            node: Some(statement.clone()),
         }
     }
 

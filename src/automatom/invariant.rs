@@ -1,23 +1,23 @@
 use std::fmt::Display;
 
-use crate::language::{node::Node, value::Value};
+use crate::language::{expression::Expression, value::Value};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Invariant {
-    pub node: Node,
+    pub node: Expression,
 }
 
 impl Invariant {
-    pub fn new(node: &Node) -> Invariant {
+    pub fn new(node: &Expression) -> Invariant {
         Invariant { node: node.clone() }
     }
 
     pub fn new_true() -> Invariant {
-        Self::new(&Node::Literal(Value::Bool(true)))
+        Self::new(&Expression::Literal(Value::Bool(true)))
     }
 
     pub fn new_false() -> Invariant {
-        Self::new(&Node::Literal(Value::Bool(false)))
+        Self::new(&Expression::Literal(Value::Bool(false)))
     }
 }
 

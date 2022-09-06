@@ -87,7 +87,9 @@ mod tests {
             automaton::Automaton, channel::Channel, edge::Edge, guard::Guard, invariant::Invariant,
             location::Location, update::Update,
         },
-        language::{environment::Environment, node::Node, value::Value},
+        language::{
+            environment::Environment, statement::Statement, value::Value,
+        },
         transition_system::{
             state::State,
             transition_system_breadth_first_search::TransitionSystemBreadthFirstSearch,
@@ -128,8 +130,14 @@ mod tests {
         let guard = Guard::new_true();
         let mut environment = Environment::new_empty();
         environment.insert("ident", &Value::new_false());
-        let update_false = Update::new(&Node::new_assignment("ident", &Value::new_false()));
-        let update_true = Update::new(&Node::new_assignment("ident", &Value::new_true()));
+        let update_false = Update::new(&Statement::new_simple_assignment(
+            "ident",
+            &Value::new_false(),
+        ));
+        let update_true = Update::new(&Statement::new_simple_assignment(
+            "ident",
+            &Value::new_true(),
+        ));
         let a_b_in = Edge::new(&a, &channel_in, &guard, &update_false, &b);
         let a_b_out = Edge::new(&a, &channel_out, &guard, &update_true, &b);
         let edges = &HashSet::from([a_b_in.clone(), a_b_out.clone()]);

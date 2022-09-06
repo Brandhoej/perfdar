@@ -3,7 +3,7 @@ use std::{
     fmt::Display,
 };
 
-use super::{node::Node, value::Value};
+use super::{expression::Expression, statement::Statement, value::Value};
 
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub struct Environment {
@@ -24,14 +24,14 @@ impl Environment {
     }
 
     pub fn contains_with_value(&self, identifier: &str, value: &Value) -> bool {
-        if let Some(identified_value) = self.get(identifier) {
+        if let Some(identified_value) = self.get_value(identifier) {
             identified_value == value
         } else {
             false
         }
     }
 
-    pub fn get(&self, identifier: &str) -> Option<&Value> {
+    pub fn get_value(&self, identifier: &str) -> Option<&Value> {
         self.map.get(identifier)
     }
 
@@ -64,14 +64,25 @@ impl Environment {
         self.map.keys().count()
     }
 
-    pub fn contains_identifiers_in_node(&self, node: &Node) -> bool {
-        match node {
-            Node::Literal(literal) => {
+    pub fn contains_identifiers_in_expression(&self, expression: &Expression) -> bool {
+        match expression {
+            Expression::Literal(literal) => {
                 return self.contains_identifiers_in_value(literal);
             }
-            Node::Assigment { identifier, value } => {
-                return self.contains_identifiers_in_value(identifier)
-                    && self.contains_identifiers_in_value(value);
+            Expression::Parenthesized(expr) => self.contains_identifiers_in_expression(expr),
+            Expression::Binary(lhs, _, rhs) => {
+                self.contains_identifiers_in_expression(lhs)
+                    && self.contains_identifiers_in_expression(rhs)
+            }
+            Expression::Unary(_, expr) => self.contains_identifiers_in_expression(expr),
+        }
+    }
+
+    pub fn contains_identifiers_in_statement(&self, statement: &Statement) -> bool {
+        match statement {
+            Statement::Assigment { identifier, value } => {
+                return self.contains_identifiers_in_expression(identifier)
+                    && self.contains_identifiers_in_expression(value);
             }
         }
     }
@@ -83,10 +94,10 @@ impl Environment {
         true
     }
 
-    pub fn missing_identifiers_in_node(&self, node: &Node) -> Vec<String> {
+    pub fn missing_identifiers_in_expression(&self, expression: &Expression) -> Vec<String> {
         let mut missing = Vec::new();
-        let mut worklist: VecDeque<&Node> = VecDeque::new();
-        worklist.push_back(node);
+        let mut worklist: VecDeque<&Expression> = VecDeque::new();
+        worklist.push_back(expression);
 
         let mut contains_value_or_add = |value: &Value| {
             if let Value::Identifier(identifier) = value {
@@ -97,13 +108,30 @@ impl Environment {
         };
 
         while !worklist.is_empty() {
-            let current = worklist.pop_back().unwrap();
+            match worklist.pop_front().unwrap() {
+                Expression::Literal(literal) => contains_value_or_add(literal),
+                Expression::Parenthesized(expr) => worklist.push_back(expr),
+                Expression::Binary(lhs, _, rhs) => {
+                    worklist.push_back(lhs);
+                    worklist.push_back(rhs);
+                }
+                Expression::Unary(_, expr) => worklist.push_back(expr),
+            }
+        }
 
-            match current {
-                Node::Literal(literal) => contains_value_or_add(literal),
-                Node::Assigment { identifier, value } => {
-                    contains_value_or_add(identifier);
-                    contains_value_or_add(value);
+        missing
+    }
+
+    pub fn missing_identifiers_in_statement(&self, statement: &Statement) -> Vec<String> {
+        let mut missing = Vec::new();
+        let mut worklist: VecDeque<&Statement> = VecDeque::new();
+        worklist.push_back(statement);
+
+        while !worklist.is_empty() {
+            match worklist.pop_front().unwrap() {
+                Statement::Assigment { identifier, value } => {
+                    missing.extend(self.missing_identifiers_in_expression(identifier));
+                    missing.extend(self.missing_identifiers_in_expression(value));
                 }
             }
         }
@@ -135,7 +163,7 @@ impl Display for Environment {
 
 #[cfg(test)]
 mod tests {
-    use crate::language::{node::Node, value::Value};
+    use crate::language::{expression::Expression, statement::Statement, value::Value};
 
     use super::Environment;
 
@@ -205,9 +233,9 @@ mod tests {
     fn environment_contains_identifiers_in_node_literal_has_identifier() {
         let mut environment = Environment::new_empty();
         environment.insert("a", &Value::Bool(true));
-        let identifier = Node::Literal(Value::Identifier(String::from("a")));
+        let identifier = Expression::Literal(Value::Identifier(String::from("a")));
 
-        let contains = environment.contains_identifiers_in_node(&identifier);
+        let contains = environment.contains_identifiers_in_expression(&identifier);
 
         assert!(contains);
     }
@@ -216,9 +244,9 @@ mod tests {
     fn environment_contains_identifiers_in_node_literal_does_not_have_identifier() {
         let mut environment = Environment::new_empty();
         environment.insert("a", &Value::Bool(true));
-        let identifier = Node::Literal(Value::Identifier(String::from("b")));
+        let identifier = Expression::Literal(Value::Identifier(String::from("b")));
 
-        let contains = environment.contains_identifiers_in_node(&identifier);
+        let contains = environment.contains_identifiers_in_expression(&identifier);
 
         assert!(!contains);
     }
@@ -227,12 +255,9 @@ mod tests {
     fn environment_contains_identifiers_in_node_assignment_has_identifier() {
         let mut environment = Environment::new_empty();
         environment.insert("a", &Value::Bool(true));
-        let assignment = Node::Assigment {
-            identifier: Value::Identifier(String::from("a")),
-            value: Value::Bool(false),
-        };
+        let assignment = Statement::new_simple_assignment("a", &Value::new_false());
 
-        let contains = environment.contains_identifiers_in_node(&assignment);
+        let contains = environment.contains_identifiers_in_statement(&assignment);
 
         assert!(contains);
     }
@@ -241,12 +266,9 @@ mod tests {
     fn environment_contains_identifiers_in_node_assignment_does_not_have_identifier() {
         let mut environment = Environment::new_empty();
         environment.insert("a", &Value::Bool(true));
-        let assignment = Node::Assigment {
-            identifier: Value::Identifier(String::from("b")),
-            value: Value::Bool(false),
-        };
+        let assignment = Statement::new_simple_assignment("b", &Value::new_false());
 
-        let contains = environment.contains_identifiers_in_node(&assignment);
+        let contains = environment.contains_identifiers_in_statement(&assignment);
 
         assert!(!contains);
     }
@@ -256,7 +278,7 @@ mod tests {
         let mut environment = Environment::new_empty();
         environment.insert("a", &Value::Bool(true));
 
-        let value = environment.get("b");
+        let value = environment.get_value("b");
 
         assert_eq!(value, None);
     }
@@ -277,7 +299,7 @@ mod tests {
         environment.insert("a", &Value::Bool(true));
         environment.set("a", &Value::Bool(false));
 
-        let value = environment.get("a").unwrap();
+        let value = environment.get_value("a").unwrap();
 
         assert_eq!(*value, Value::Bool(false));
     }
@@ -301,8 +323,8 @@ mod tests {
 
         let concat = left.concat(&right);
         let count = left.count();
-        let a = left.get("a").unwrap();
-        let b = left.get("b").unwrap();
+        let a = left.get_value("a").unwrap();
+        let b = left.get_value("b").unwrap();
 
         assert!(concat);
         assert_eq!(count, 2);
@@ -319,7 +341,7 @@ mod tests {
 
         let concat = left.concat(&right);
         let count = left.count();
-        let a = left.get("a").unwrap();
+        let a = left.get_value("a").unwrap();
 
         assert!(!concat);
         assert_eq!(count, 1);
@@ -354,12 +376,9 @@ mod tests {
     fn environment_missing_identifiers_in_node() {
         let mut environment = Environment::new_empty();
         environment.insert("a", &Value::Bool(false));
-        let assignment = Node::Assigment {
-            identifier: Value::Identifier(String::from("a")),
-            value: Value::Identifier(String::from("b")),
-        };
+        let assignment = Statement::new_simple_assignment("a", &Value::new_identifier("b"));
 
-        let missing = environment.missing_identifiers_in_node(&assignment);
+        let missing = environment.missing_identifiers_in_statement(&assignment);
 
         assert_eq!(missing.len(), 1);
         assert_eq!(missing[0], "b");

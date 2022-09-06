@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, PartialOrd)]
 pub enum Error {
     #[error("Encountered a runtime error: {message:}")]
     RuntimeError { message: String },

@@ -49,8 +49,8 @@ impl Edge {
     pub fn execute(&self, state: &State) -> State {
         if let Some(update) = self.update.node.clone() {
             let mut interpreter = Interpreter::new(&state.environment);
-            let evaluation = interpreter.eval(&update);
-            if evaluation.is_err() {
+            let evaluation = interpreter.eval_statement(&update);
+            if evaluation != None {
                 // TODO: Handle failed evaluations
                 panic!("Edge update execution failed");
             }
@@ -66,7 +66,7 @@ impl Edge {
         }
 
         let mut interpreter = Interpreter::new(&state.environment);
-        let evaluation_result = interpreter.eval(&self.guard.node);
+        let evaluation_result = interpreter.eval_expression(&self.guard.node);
         if evaluation_result.is_err() {
             return false;
         }
@@ -98,10 +98,7 @@ mod tests {
         hash::{Hash, Hasher},
     };
 
-    use crate::{
-        automatom::{channel::Channel, invariant::Invariant, location::Location},
-        language::node::Node,
-    };
+    use crate::automatom::{channel::Channel, invariant::Invariant, location::Location};
 
     use super::{Edge, Guard, Update};
 
@@ -112,18 +109,17 @@ mod tests {
         let channel_ident = "channel";
         let in_channel = Channel::new_output(channel_ident);
         let out_channel = Channel::new_input(channel_ident);
-        let node = Node::new_identifier("ident");
         let in_edge = Edge::new_loop(
             &location,
             &in_channel,
             &Guard::new_true(),
-            &Update::new(&node),
+            &Update::default(),
         );
         let out_edge = Edge::new_loop(
             &location,
             &out_channel,
             &Guard::new_true(),
-            &Update::new(&node),
+            &Update::default(),
         );
 
         let mut in_hasher = DefaultHasher::new();

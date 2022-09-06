@@ -1,8 +1,9 @@
 pub mod environment;
 pub mod error;
 pub mod evaluation;
+pub mod expression;
 pub mod interpreter;
-pub mod node;
-pub mod node_type;
+pub mod lang_type;
+pub mod statement;
 pub mod type_checker;
 pub mod value;

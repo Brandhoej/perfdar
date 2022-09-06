@@ -2,9 +2,10 @@ use std::collections::VecDeque;
 use std::{collections::HashSet, fmt::Debug};
 
 use crate::language::environment::Environment;
+use crate::language::expression::Expression;
 use crate::language::interpreter::Interpreter;
-use crate::language::node::Node;
-use crate::language::node_type::NodeType;
+use crate::language::lang_type::LangType;
+use crate::language::statement::Statement;
 use crate::language::type_checker::TypeChecker;
 use crate::language::value::Value;
 
@@ -48,9 +49,25 @@ impl Automaton {
         };
 
         // Find all the inputs/outputs used as actions in the edges
-        let handle_edge_identifiers =
-            |envir: &mut Environment, node: &Node| -> Option<Vec<String>> {
-                let missing = envir.missing_identifiers_in_node(node);
+        let handle_edge_guard_identifiers =
+            |envir: &mut Environment, expression: &Expression| -> Option<Vec<String>> {
+                let missing = envir.missing_identifiers_in_expression(expression);
+
+                if declare_variables {
+                    for identifier in missing.clone() {
+                        envir.insert(&*identifier, &Value::new_false());
+                    }
+                }
+                return if missing.len() == 0 {
+                    None
+                } else {
+                    Some(missing)
+                };
+            };
+
+        let handle_edge_update_indentifiers =
+            |envir: &mut Environment, statement: &Statement| -> Option<Vec<String>> {
+                let missing = envir.missing_identifiers_in_statement(statement);
 
                 if declare_variables {
                     for identifier in missing.clone() {
@@ -72,7 +89,7 @@ impl Automaton {
             };
 
             if let Some(missing_identifiers) =
-                handle_edge_identifiers(&mut initial_environment, &edge.guard.node)
+                handle_edge_guard_identifiers(&mut initial_environment, &edge.guard.node)
             {
                 // Error handling: Check that all identifiers in the guard is declared
                 if !declare_variables {
@@ -86,7 +103,7 @@ impl Automaton {
 
             if let Some(update) = edge.clone().update.node {
                 if let Some(missing_identifiers) =
-                    handle_edge_identifiers(&mut initial_environment, &update)
+                    handle_edge_update_indentifiers(&mut initial_environment, &update)
                 {
                     // Error handling: Check that all identifiers in the update is declared
                     if !declare_variables {
@@ -101,9 +118,9 @@ impl Automaton {
 
             // Error handling: Check that the guard is a logical node
             let actual = TypeChecker::new(&initial_environment)
-                .check_node(&edge.guard.node)
+                .check_expression(&edge.guard.node)
                 .unwrap();
-            if actual != NodeType::Logical {
+            if actual != LangType::Logical {
                 return Err(Error::EdgeGuardIsNotLogical {
                     automaton: String::from(name),
                     edge: edge.clone(),
@@ -125,7 +142,7 @@ impl Automaton {
         let mut check_invariant = |location: &Location, invariant: &Invariant| -> Option<Error> {
             // un-declared identifiers are handle the same way for invariants as edges
             if let Some(missing_identifiers) =
-                handle_edge_identifiers(&mut initial_environment, &invariant.node)
+                handle_edge_guard_identifiers(&mut initial_environment, &invariant.node)
             {
                 if !declare_variables {
                     return Some(Error::MissingIdentifiersInLocationInvariant {
@@ -212,7 +229,7 @@ impl Automaton {
         } = unwrapped_initial
         {
             let mut interpreter = Interpreter::new(&initial_environment);
-            let evaluation_result = interpreter.eval(&invariant.node.clone());
+            let evaluation_result = interpreter.eval_expression(&invariant.node.clone());
             if evaluation_result.is_err() {
                 return Err(Error::InconsistentInitialLocation {
                     automaton: String::from(name),
@@ -324,7 +341,9 @@ mod tests {
             channel::Channel, edge::Edge, error::Error, guard::Guard, invariant::Invariant,
             location::Location, update::Update,
         },
-        language::{environment::Environment, node::Node, value::Value},
+        language::{
+            environment::Environment, expression::Expression, statement::Statement, value::Value,
+        },
     };
 
     use super::Automaton;
@@ -483,7 +502,7 @@ mod tests {
     fn automaton_new_missing_identifiers_in_edge_guard() {
         let location = Location::new_initial("initial", &Invariant::new_true());
         let channel = Channel::new_output("channel");
-        let node = Node::new_identifier("ident");
+        let node = Expression::new_identifier("ident");
         let edge = Edge::new_loop(&location, &channel, &Guard::new(&node), &Update::empty());
         let edges = HashSet::from([edge]);
         let environment = Environment::new_empty();
@@ -492,25 +511,16 @@ mod tests {
     }
 
     #[test]
-    fn automaton_new_edge_guard_is_not_logical() {
-        let location = Location::new_initial("initial", &Invariant::new_true());
-        let channel = Channel::new_output("channel");
-        let identifier = "ident";
-        let node = Node::new_assignment(identifier, &Value::new_false());
-        let edge = Edge::new_loop(&location, &channel, &Guard::new(&node), &Update::empty());
-        let edges = HashSet::from([edge]);
-        let mut environment = Environment::new_empty();
-        environment.insert(identifier, &Value::new_true());
-        let automaton = Automaton::new("automaton", &edges, Some(&environment));
-        assert_err!(automaton, Error::EdgeGuardIsNotLogical { .. });
-    }
-
-    #[test]
     fn automaton_new_missing_identifiers_in_edge_update() {
         let location = Location::new_initial("initial", &Invariant::new_true());
         let channel = Channel::new_output("channel");
-        let node = Node::new_identifier("ident");
-        let edge = Edge::new_loop(&location, &channel, &Guard::new_true(), &Update::new(&node));
+        let assignment = Statement::new_simple_assignment("unknown", &Value::new_false());
+        let edge = Edge::new_loop(
+            &location,
+            &channel,
+            &Guard::new_true(),
+            &Update::new(&assignment),
+        );
         let edges = HashSet::from([edge]);
         let environment = Environment::new_empty();
         let automaton = Automaton::new("automaton", &edges, Some(&environment));
@@ -523,18 +533,17 @@ mod tests {
         let channel_ident = "channel";
         let in_channel = Channel::new_output(channel_ident);
         let out_channel = Channel::new_input(channel_ident);
-        let node = Node::new_identifier("ident");
         let in_edge = Edge::new_loop(
             &location,
             &in_channel,
             &Guard::new_false(),
-            &Update::new(&node),
+            &Update::new_pure(),
         );
         let out_edge = Edge::new_loop(
             &location,
             &out_channel,
             &Guard::new_true(),
-            &Update::new(&node),
+            &Update::new_pure(),
         );
         let edges = HashSet::from([in_edge, out_edge]);
         let automaton = Automaton::new("automaton", &edges, None);
@@ -599,7 +608,7 @@ mod tests {
 
     #[test]
     fn automaton_new_inconsistent_initial_location_with_boolean_evaluation() {
-        let invariant_node = Node::new_identifier("bool");
+        let invariant_node = Expression::new_identifier("bool");
         let mut environment = Environment::new_empty();
         environment.insert("bool", &Value::new_false());
         let location = Location::new_initial("a", &Invariant::new(&invariant_node));

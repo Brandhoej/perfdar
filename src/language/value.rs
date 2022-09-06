@@ -18,6 +18,10 @@ impl Value {
     pub fn new_identifier(ident: &str) -> Self {
         Value::Identifier(String::from(ident))
     }
+
+    pub fn new_boolean(boolean: bool) -> Self {
+        Value::Bool(boolean)
+    }
 }
 
 impl Display for Value {

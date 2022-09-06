@@ -1,16 +1,16 @@
 use std::fmt::Display;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum NodeType {
+pub enum LangType {
     Logical,
     Void,
 }
 
-impl Display for NodeType {
+impl Display for LangType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NodeType::Logical => f.write_str("logical"),
-            NodeType::Void => f.write_str("void"),
+            LangType::Logical => f.write_str("logical"),
+            LangType::Void => f.write_str("void"),
         }
     }
 }

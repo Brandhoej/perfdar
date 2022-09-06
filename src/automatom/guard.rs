@@ -1,23 +1,23 @@
 use std::fmt::Display;
 
-use crate::language::{node::Node, value::Value};
+use crate::language::{expression::Expression, value::Value};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Guard {
-    pub node: Node,
+    pub node: Expression,
 }
 
 impl Guard {
-    pub fn new(node: &Node) -> Self {
+    pub fn new(node: &Expression) -> Self {
         Self { node: node.clone() }
     }
 
     pub fn new_true() -> Self {
-        Self::new(&Node::Literal(Value::Bool(true)))
+        Self::new(&Expression::Literal(Value::Bool(true)))
     }
 
     pub fn new_false() -> Self {
-        Self::new(&Node::Literal(Value::Bool(false)))
+        Self::new(&Expression::Literal(Value::Bool(false)))
     }
 }
 
