@@ -1,6 +1,9 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
-use crate::language::{expression::Expression, value::Value};
+use crate::language::{
+    expression::{BinaryOperator, Expression},
+    value::Value,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Invariant {
@@ -18,6 +21,20 @@ impl Invariant {
 
     pub fn new_false() -> Invariant {
         Self::new(&Expression::Literal(Value::Bool(false)))
+    }
+
+    pub fn new_conjunction(invariants: HashSet<Invariant>) -> Invariant {
+        if invariants.len() < 2 {
+            panic!("Cannto conjoin less than two invariants")
+        }
+
+        let mut invariant_iter = invariants.iter().map(|invariant| invariant.node.clone());
+        let mut lhs = invariant_iter.next().unwrap();
+        for rhs in invariant_iter {
+            lhs = Expression::new_binary_expression(&lhs, &BinaryOperator::LogicalAnd, &rhs);
+        }
+
+        Invariant::new(&lhs)
     }
 }
 

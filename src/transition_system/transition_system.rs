@@ -87,9 +87,7 @@ mod tests {
             automaton::Automaton, channel::Channel, edge::Edge, guard::Guard, invariant::Invariant,
             location::Location, update::Update,
         },
-        language::{
-            environment::Environment, statement::Statement, value::Value,
-        },
+        language::{environment::Environment, statement::Statement, value::Value},
         transition_system::{
             state::State,
             transition_system_breadth_first_search::TransitionSystemBreadthFirstSearch,

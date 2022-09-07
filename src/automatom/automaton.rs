@@ -163,7 +163,7 @@ impl Automaton {
                         return Err(error);
                     }
                 }
-                Location::Product { locations } => {
+                Location::Conjunction { locations, .. } => {
                     for location in locations {
                         locations_worklist.push_back(location);
                     }
